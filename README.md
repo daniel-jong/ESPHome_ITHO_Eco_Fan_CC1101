@@ -1,6 +1,6 @@
 # ESPHome ITHO CVE ECO-FAN 2 control
 Library for NodeMCU ESP8266 in combination with Hassio Home Assistant ESPHome ITHO Eco Fan CC1101
-Code is optimized for Itho CVE Eco-fan 2. For newer fans, please see the IthoCC1101.cpp file and search for "> 2011" and make the changes as described.
+Code is optimized for Itho CVE Eco after 2011.
 
 
 Trying to get ESPHome to mimic what is comprised in
@@ -37,23 +37,23 @@ fan:
       mechanical_ventilation:
         friendly_name: "Mechanische afzuiging"
         value_template: >
-          {{ "off" if states('sensor.fanspeed') == 'Standby' else "on" }}
+          {{ "off" if states('sensor.fan_speed') == 'off' else "on" }}
         percentage_template: >
-          {% set speedperc = {'Standby': 0, 'Low': 33, 'Medium': 66, 'High': 100} %}
-          {{ speedperc [states('sensor.fanspeed')] | int }}
+          {% set speed = {'off': 0, 'low': 25, 'medium': 50, 'high': 75, 'full': 100} %}
+          {{ speed [states('sensor.fan_speed')] | int }}
         turn_on:
           service: switch.turn_on
           data:
-            entity_id: switch.fansendhigh
+            entity_id: switch.fan_high
         turn_off:
           service: switch.turn_on
           data:
-            entity_id: switch.fansendstandby
+            entity_id: switch.fan_standby
         set_percentage:
           service: switch.turn_on
           data_template:
             entity_id: >
-              {% set id_mapp = {0: 'switch.fansendstandby', 33:'switch.fansendlow', 66:'switch.fansendmedium', 100:'switch.fansendhigh'} %}
+              {% set id_mapp = {0: 'switch.fan_standby', 25:'switch.fan_low', 50:'switch.fan_medium', 75:'switch.fan_high', 100:'switch.fan_full'} %}
               {{id_mapp[percentage]}}
         speed_count: 4
 ```
