@@ -314,7 +314,7 @@ class FanRecv : public PollingComponent {
 
 		if ((State >= 10) && (Timer <= 0))
 		{
-			State = 1;
+			State = 2; // I prefer that after time has elapsed it returns to Medium
 			Timer = 0;
 			fantimer->publish_state(String(Timer).c_str()); // this ensures that times value 0 is published when elapsed
 		}
