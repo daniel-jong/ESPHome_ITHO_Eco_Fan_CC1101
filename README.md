@@ -55,7 +55,7 @@ fan:
             entity_id: >
               {% set id_mapp = {0: 'switch.fansendstandby', 33:'switch.fansendlow', 66:'switch.fansendmedium', 100:'switch.fansendhigh'} %}
               {{id_mapp[percentage]}}
-        speed_count: 2
+        speed_count: 4
 ```
 
 ## ESPHome Configuration
@@ -146,6 +146,16 @@ switch:
   switches:
     name: "FanSendHigh"
     id: swfan_high
+    icon: mdi:fan
+
+- platform: custom
+  lambda: |-
+    auto fansendfull = new FanSendFull();
+    App.register_component(fansendfull);
+    return {fansendfull};
+  switches:
+    name: "FanSendFull"
+    id: swfan_full
     icon: mdi:fan
 
 - platform: custom
