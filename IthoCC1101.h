@@ -10,7 +10,7 @@
 #include "CC1101.h"
 #include "IthoPacket.h"
 #include "CC1101Packet.h"
-#include "sys_log.h"
+//#include "sys_log.h"
 
 #if !defined(MAX_NUM_OF_REMOTES)
 #define MAX_NUM_OF_REMOTES 10

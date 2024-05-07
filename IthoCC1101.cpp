@@ -1832,7 +1832,7 @@ void IthoCC1101::handleTimer(IthoPacket *packetPtr)
 
 void IthoCC1101::handle31D9(IthoPacket *packetPtr)
 {
-  D_LOG("handle31D9");
+  //D_LOG("handle31D9");
   uint32_t tempID = 0;
   if (packetPtr->deviceId0 != 0)
   {
@@ -1844,7 +1844,7 @@ void IthoCC1101::handle31D9(IthoPacket *packetPtr)
   }
   else
   {
-    D_LOG("deviceId not found");
+    //D_LOG("deviceId not found");
     return;
   }
 
@@ -1875,7 +1875,7 @@ void IthoCC1101::handle31D9(IthoPacket *packetPtr)
 
 void IthoCC1101::handle31DA(IthoPacket *packetPtr)
 {
-  D_LOG("handle31DA");
+  //D_LOG("handle31DA");
   uint32_t tempID = 0;
   if (packetPtr->deviceId0 != 0)
   {
@@ -1887,7 +1887,7 @@ void IthoCC1101::handle31DA(IthoPacket *packetPtr)
   }
   else
   {
-    D_LOG("deviceId not found");
+    //D_LOG("deviceId not found");
     return;
   }
 
@@ -1914,7 +1914,7 @@ void IthoCC1101::handle31DA(IthoPacket *packetPtr)
       // item.remoteID[2] = (packetPtr->deviceId1) & 0xFF;
       item.lastCommand = packetPtr->command;
       item.timestamp = now;
-      D_LOG("IthoStatus remote ID match");
+      //D_LOG("IthoStatus remote ID match");
       return;
     }
   }
@@ -2186,7 +2186,7 @@ void IthoCC1101::handleZoneSetpoint(IthoPacket *packetPtr)
 
 void IthoCC1101::handleDeviceInfo(IthoPacket *packetPtr)
 {
-  D_LOG("handleDeviceInfo");
+  //D_LOG("handleDeviceInfo");
   uint32_t tempID = 0;
   if (packetPtr->deviceId0 != 0)
   {
@@ -2221,7 +2221,7 @@ void IthoCC1101::handleDeviceInfo(IthoPacket *packetPtr)
     {
       item.lastCommand = packetPtr->command;
       item.timestamp = now;
-      D_LOG("IthoDeviceInfo remote ID match");
+      //D_LOG("IthoDeviceInfo remote ID match");
       return;
     }
   }
