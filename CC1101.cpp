@@ -51,9 +51,10 @@ uint8_t CC1101::writeCommand(uint8_t command)
 
   select();
 
-  SPI.beginTransaction(SPISettings());
+  //SPI.beginTransaction(SPISettings());
+  while(digitalRead(MISO) == HIGH) yield();
   result = SPI.transfer(command);
-  SPI.endTransaction();
+  //SPI.endTransaction();
 
   deselect();
 
@@ -64,11 +65,12 @@ void CC1101::writeRegister(uint8_t address, uint8_t data)
 {
   select();
 
-  SPI.beginTransaction(SPISettings());
+  //SPI.beginTransaction(SPISettings());
+  while(digitalRead(MISO) == HIGH) yield();
   SPI.transfer(address);
   SPI.transfer(data);
-  SPI.endTransaction();
 
+  //SPI.endTransaction();
   deselect();
 }
 
@@ -78,10 +80,11 @@ uint8_t CC1101::readRegister(uint8_t address)
 
   select();
 
-  SPI.beginTransaction(SPISettings());
+  //SPI.beginTransaction(SPISettings());
+  while(digitalRead(MISO) == HIGH) yield();
   SPI.transfer(address);
   val = SPI.transfer(0);
-  SPI.endTransaction();
+  //SPI.endTransaction();
 
   deselect();
 
@@ -165,13 +168,14 @@ void CC1101::writeBurstRegister(const uint8_t address, const uint8_t *data, cons
 
   select();
 
-  SPI.beginTransaction(SPISettings());
+  //SPI.beginTransaction(SPISettings());
+  while(digitalRead(MISO) == HIGH) yield();
   SPI.transfer(address | CC1101_WRITE_BURST);
   for (i = 0; i < length; i++)
   {
     SPI.transfer(data[i]);
   }
-  SPI.endTransaction();
+  //SPI.endTransaction();
 
   deselect();
 }
@@ -182,14 +186,15 @@ void CC1101::readBurstRegister(uint8_t *buffer, const uint8_t address, const uin
 
   select();
 
-  SPI.beginTransaction(SPISettings());
+  //SPI.beginTransaction(SPISettings());
+  while(digitalRead(MISO) == HIGH) yield();
   SPI.transfer(address | CC1101_READ_BURST);
 
   for (i = 0; i < length; i++)
   {
     buffer[i] = SPI.transfer(0x00);
   }
-  SPI.endTransaction();
+  //SPI.endTransaction();
 
   deselect();
 }
