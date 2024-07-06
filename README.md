@@ -73,17 +73,17 @@ esphome:
   libraries:
     - SPI
     - Ticker
-    - https://github.com/Scriptman/ESPHome_ITHO_Eco_Fan_CC1101.git
+    - https://github.com/daniel-jong/ESPHome_ITHO_Eco_Fan_CC1101.git
     
   #Set ID from remotes that are used, so you can identify the root of the last State change
   on_boot:
     then:
       - lambda: |-
-          Idlist[0]={"e9:ee:93:f1:fd:e6:ee:b2","Badkamer"};
-          Idlist[1]={"65:6a:9a:69:a6:69:9a:56","Keuken"};
+          Idlist[0]={"89,209,0,"Badkamer"};
+          Idlist[1]={"89,209,0,"Keuken"};
           Idlist[2]={"ID3","ID3"};
-          Mydeviceid="HomeAssistant";
-          id(swfan_low).turn_on(); //This ensures fan is at low-speed at boot
+         # Mydeviceid="HomeAssistant";
+         # id(swfan_low).turn_on(); //This ensures fan is at low-speed at boot
 
 wifi:
   ssid: "WiFi SSID"
@@ -232,7 +232,7 @@ IdDict Idlist[] = { {"ID1", "Controller Room1"},
 				};
 
 IthoCC1101 rf;
-void ITHOinterrupt() ICACHE_RAM_ATTR;
+IRAM_ATTR void ITHOinterrupt(); // ICACHE_RAM_ATTR;
 void ITHOcheck();
 
 // extra for interrupt handling
@@ -297,12 +297,39 @@ class FanRecv : public PollingComponent {
 
     void setup() {
       InsReffanspeed = this->fanspeed; // Make textsensor outside class available, so it can be used in Interrupt Service Routine
+      
+      ESP_LOGD("custom", "Startup");
+      
+      // Test RF chip
+      uint8_t chipVersion = rf.getChipVersion();
+      if (chipVersion)
+      {
+         ESP_LOGD("custom", "CC1101 RF module found");
+      }
+         else
+      {
+         ESP_LOGD("custom", "NO RF module found");
+      }
+
+      ESP_LOGD("custom", "rf init");
       rf.init();
+
+      rf.setDefaultID(150, 149, 129);
+      rf.setBindAllowed(false);
+      rf.setAllowAll(true); // This disables filtering of recieved events alowing you to see device ids
+     
+      rf.addRFDevice(150, 0, 0, RemoteTypes::RFTCVE, true);
+      rf.addRFDevice(150, 0, 0, RemoteTypes::RFTCO2, true);
+      rf.addRFDevice(89, 0, 0, RemoteTypes::RFTCO2, true);
+      rf.addRFDevice(6, 0, 0, RemoteTypes::RFTAUTO, false);
+      ESP_LOGD("custom", "rf post init");
+
       // Followin wiring schema, change PIN if you wire differently
-      pinMode(D1, INPUT);
-      attachInterrupt(D1, ITHOinterrupt, RISING);
+      pinMode(D2, INPUT);
+      //pinMode(D1, INPUT);
+      attachInterrupt(D2, ITHOinterrupt, RISING);      
       //attachInterrupt(D1, ITHOcheck, RISING);
-      rf.initReceive();
+			
       InitRunned = true;
     }
 
@@ -314,7 +341,7 @@ class FanRecv : public PollingComponent {
 
 		if ((State >= 10) && (Timer <= 0))
 		{
-			State = 2; // I prefer that after time has elapsed it returns to Medium
+			State = 1;
 			Timer = 0;
 			fantimer->publish_state(String(Timer).c_str()); // this ensures that times value 0 is published when elapsed
 		}
@@ -398,7 +425,7 @@ class FanSendStandby : public Component, public Switch {
 
     void write_state(bool state) override {
       if ( state ) {
-        rf.sendCommand(IthoStandby);
+        rf.sendCommand(IthoAway);
         State = 0;
 		Timer = 0;
 		LastID = Mydeviceid;
@@ -462,7 +489,7 @@ class FanSendIthoJoin : public Component, public Switch {
     }
 };
 
-void ITHOinterrupt() {
+IRAM_ATTR void ITHOinterrupt() {
 	ITHOticker.once_ms(10, ITHOcheck);
 }
 
@@ -477,75 +504,93 @@ int RFRemoteIndex(String rfremoteid)
 void ITHOcheck() {
   noInterrupts();
   
-  if (rf.checkForNewPacket()) {
-    IthoCommand cmd = rf.getLastCommand();
-    String Id = rf.getLastIDstr();
+  if (rf.receivePacket()) {
+	//ESP_LOGD("itho_rf", "We got a new packet over here");
+    IthoPacket *packet = rf.checkForNewPacket();
+    rf.parseMessage(packet);
+    
+	uint8_t *lastID = rf.getLastID(packet);
+    IthoCommand cmd = rf.getLastCommand(packet);
+	RemoteTypes remtype = rf.getLastRemType(packet);
+    
+	//String Id = rf.getLastIDstr(packet, false);
+	String Id = String(lastID[1]) + "," + String(lastID[2]) + "," + String(lastID[3]);
+	
 	int index = RFRemoteIndex(Id);
     
-    if ( index>=0) { // Only accept commands that are in the list
+    if (index >= 0) { // Only accept commands of controls that are in the list
         switch (cmd) {
           case IthoUnknown:
-            ESP_LOGD("custom", "Unknown command");
+            ESP_LOGD("itho_rf", "Unknown command");
             break;
-          case IthoStandby:
-          case DucoStandby:
-            ESP_LOGD("custom", "IthoStandby");
+          case IthoAway:
+            ESP_LOGD("itho_rf", "IthoAway");
             State = 0;
             Timer = 0;
             LastID = Idlist[index].Roomname;
           case IthoLow:
-          case DucoLow:
-            ESP_LOGD("custom", "IthoLow");
+            ESP_LOGD("itho_rf", "Speed to Low");
             State = 1;
             Timer = 0;
             LastID = Idlist[index].Roomname;
             break;
           case IthoMedium:
-          case DucoMedium:
-            ESP_LOGD("custom", "Medium");
+            ESP_LOGD("itho_rf", "Medium");
             State = 2;
             Timer = 0;
             LastID = Idlist[index].Roomname;
             break;
           case IthoHigh:
-          case DucoHigh:
-            ESP_LOGD("custom", "High");
+            ESP_LOGD("itho_rf", "High");
             State = 3;
             Timer = 0;
             LastID = Idlist[index].Roomname;
             break;
           case IthoFull:
-            ESP_LOGD("custom", "Full");
+            ESP_LOGD("itho_rf", "Full");
             State = 4;
             Timer = 0;
             LastID = Idlist[index].Roomname;
             break;
           case IthoTimer1:
-            ESP_LOGD("custom", "Timer1");
+            ESP_LOGD("itho_rf", "Timer1");
             State = 13;
             Timer = Time1;
             LastID = Idlist[index].Roomname;
             break;
           case IthoTimer2:
-            ESP_LOGD("custom", "Timer2");
+            ESP_LOGD("itho_rf", "Timer2");
             State = 23;
             Timer = Time2;
             LastID = Idlist[index].Roomname;
             break;
           case IthoTimer3:
-            ESP_LOGD("custom", "Timer3");
+            ESP_LOGD("itho_rf", "Timer3");
             State = 33;
             Timer = Time3;
             LastID = Idlist[index].Roomname;
             break;
-          case IthoJoin:
-            break;
-          case IthoLeave:
-            break;
+		  case IthoJoin:
+	      case IthoLeave:
+          case IthoAuto:
+          case IthoAutoNight:
+          case IthoCook30:
+          case IthoCook60:
+          case IthoTimerUser:
+          case IthoJoinReply:
+          case IthoPIRmotionOn:
+          case IthoPIRmotionOff:
+          case Itho31D9:
+          case Itho31DA:
+          case IthoDeviceInfo:
+			ESP_LOGV("itho_rf", "Did not handle command %s", Id.c_str());
+			break;
         }
     }
     else {
-        ESP_LOGV("custom","Ignored device-id: %s", Id.c_str());
+        ESP_LOGV("itho_rf","Ignored device-id: %s", Id.c_str());
+		//Remtype is only sent when JOINing
+		//ESP_LOGV("itho_rf","Ignored device-remotetype: %s", String(remtype));
     }
   }
   interrupts();
